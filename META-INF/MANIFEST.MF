@@ -1,0 +1,15 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Driveringest
+Bundle-SymbolicName: com.raytheon.uf.ooi.plugin.instrumentagent
+Bundle-Version: 1.0.0.qualifier
+Bundle-Vendor: RAYTHEON
+Bundle-RequiredExecutionEnvironment: JavaSE-1.6
+Require-Bundle: com.raytheon.uf.common.status;bundle-version="1.12.1174",
+ org.codehaus.jackson;bundle-version="1.7.3",
+ com.raytheon.uf.edex.ooi.decoder.dataset;bundle-version="1.14.0",
+ com.raytheon.uf.common.dataplugin.sensorreading;bundle-version="1.0.0",
+ org.apache.camel;bundle-version="2.12.3",
+ org.zeromq.jeromq;bundle-version="1.0.0",
+ org.springframework,
+ com.raytheon.uf.common.dataplugin;bundle-version="1.12.1174"
