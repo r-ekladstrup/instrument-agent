@@ -13,9 +13,6 @@ import javax.ws.rs.core.Response;
 
 import org.apache.camel.EndpointInject;
 import org.apache.camel.ProducerTemplate;
-import org.rendersnake.HtmlCanvas;
-import org.rendersnake.HtmlAttributes;
-
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.raytheon.uf.common.status.IUFStatusHandler;
 import com.raytheon.uf.common.status.UFStatus;
