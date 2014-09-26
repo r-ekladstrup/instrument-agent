@@ -43,7 +43,6 @@ public class DriverEventHandler implements Observer {
                 		// TODO handle raw
                 	} else {
                 		// inject event time into particle
-                		particle.put("time", event.get("time"));
                 		producer.sendBodyAndHeader(particle, "sensor", sensor);
                 	}
                     break;
