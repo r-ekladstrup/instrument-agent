@@ -1,0 +1,46 @@
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:amq="http://activemq.apache.org/schema/core"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:jaxrs="http://cxf.apache.org/jaxrs"
+    xsi:schemaLocation="
+        http://www.springframework.org/schema/beans 
+        http://www.springframework.org/schema/beans/spring-beans-2.0.xsd 
+        http://activemq.apache.org/schema/core 
+        http://activemq.apache.org/schema/core/activemq-core.xsd 
+        http://camel.apache.org/schema/spring 
+        http://camel.apache.org/schema/spring/camel-spring.xsd 
+        http://cxf.apache.org/jaxrs 
+        http://cxf.apache.org/schemas/jaxrs.xsd">
+        
+    
+    <bean id="agentWeb" class="com.raytheon.uf.ooi.plugin.instrumentagent.InstrumentAgentWebImpl">
+    </bean>
+    
+    <jaxrs:server id="agentWebClientSubscriptionEndpoint" address="http://0.0.0.0:12572">
+        <jaxrs:serviceBeans>
+            <ref bean="agentWeb" />
+        </jaxrs:serviceBeans>
+    </jaxrs:server>
+    
+    <bean id="ingest"
+		class="com.raytheon.uf.ooi.plugin.instrumentagent.Ingest" />
+
+	<camelContext id="agent-ingest-camel" xmlns="http://camel.apache.org/schema/spring"
+		errorHandlerRef="errorHandler">
+
+		<route id="agent-ingest-camel">
+			<from uri="jms-durable:queue:Ingest.instrument" />  
+			<doTry>
+				<pipeline>
+                    <bean ref="ingest" />
+                    <to uri="direct-vm:persistIndexAlert" />
+                </pipeline>
+				<doCatch>
+					<exception>java.lang.Throwable</exception>
+					<to uri="log:ooiAgentIngest?level=ERROR"/>
+				</doCatch>
+			</doTry>
+		</route>
+	</camelContext>
+    
+</beans>

@@ -5,7 +5,6 @@ import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
 
-import org.apache.camel.EndpointInject;
 import org.apache.camel.ProducerTemplate;
 
 import com.raytheon.uf.common.status.IUFStatusHandler;
@@ -14,23 +13,28 @@ import com.raytheon.uf.common.status.UFStatus.Priority;
 
 public class DriverEventHandler implements Observer {
 	
-	@EndpointInject(uri="jms-durable:queue:particle_data")
 	protected ProducerTemplate producer;
-	
+	protected InstrumentAgent agent;
 	protected String sensor;
 
 	protected IUFStatusHandler status = UFStatus.getHandler(Ingest.class);
 
-    public DriverEventHandler() {}
+    public DriverEventHandler(InstrumentAgent agent, ProducerTemplate producer, String sensor) {
+    	this.agent = agent;
+    	this.producer = producer;
+    	this.sensor = sensor;
+    }
     
     @Override
     public void update(Observable o, Object arg) {
-        status.handle(Priority.DEBUG, "EVENTOBSERVER GOT: " + arg);
+        status.handle(Priority.INFO, "EVENTOBSERVER GOT: " + arg);
         try {
 			Map<String, Object> event = JsonHelper.toMap((String) arg);
             switch ((String)event.get("type")) {
                 case Constants.STATE_CHANGE_EVENT:
-                    // TODO update state in proxy
+                    agent.setState((String) event.get("value"));
+                    // new state, request capabilities
+                    agent.getCapabilities(2000);
                     break;
                 case Constants.SAMPLE_EVENT:
                 	Map<String, Object> particle =
@@ -44,19 +48,13 @@ public class DriverEventHandler implements Observer {
                 	}
                     break;
                 case Constants.CONFIG_CHANGE_EVENT:
-                	// TODO update state in proxy
+                	@SuppressWarnings("unchecked")
+					Map<String, Object> resources = (Map<String, Object>) event.get("value");
+                	agent.setResources(resources);
                     break;
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
-
-	public void setSensor(String sensor) {
-		this.sensor = sensor;
-	}
-	
-	public String getSensor() {
-		return sensor;
-	}
 }
