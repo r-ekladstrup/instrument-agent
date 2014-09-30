@@ -27,7 +27,7 @@ public class DriverEventHandler implements Observer {
     
     @Override
     public void update(Observable o, Object arg) {
-        status.handle(Priority.INFO, "EVENTOBSERVER GOT: " + arg);
+        status.handle(Priority.DEBUG, "EVENTOBSERVER GOT: " + arg);
         try {
 			Map<String, Object> event = JsonHelper.toMap((String) arg);
             switch ((String)event.get("type")) {

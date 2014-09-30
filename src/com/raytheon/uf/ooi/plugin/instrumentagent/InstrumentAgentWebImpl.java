@@ -1,19 +1,33 @@
 package com.raytheon.uf.ooi.plugin.instrumentagent;
 
+import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
+import javax.ws.rs.GET;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.apache.camel.EndpointInject;
 import org.apache.camel.ProducerTemplate;
+import org.apache.cxf.service.model.EndpointInfo;
+
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.raytheon.uf.common.localization.IPathManager;
+import com.raytheon.uf.common.localization.LocalizationContext;
+import com.raytheon.uf.common.localization.PathManagerFactory;
+import com.raytheon.uf.common.localization.LocalizationContext.LocalizationLevel;
+import com.raytheon.uf.common.localization.LocalizationContext.LocalizationType;
 import com.raytheon.uf.common.status.IUFStatusHandler;
 import com.raytheon.uf.common.status.UFStatus;
 import com.raytheon.uf.common.status.UFStatus.Priority;
@@ -24,8 +38,21 @@ public class InstrumentAgentWebImpl implements IAgentWebInterface {
 	private final IUFStatusHandler log = UFStatus.getHandler(this.getClass());
 	private final Map<String, InstrumentAgent> agentMap = new HashMap<>();
 	private final Executor executor;
+	private String contentPathString;
 	
-	public InstrumentAgentWebImpl() {
+	public InstrumentAgentWebImpl(String basePath) {
+		
+		IPathManager pathManager = PathManagerFactory.getPathManager();
+		LocalizationContext context = pathManager.getContext(LocalizationType.EDEX_STATIC,
+		        LocalizationLevel.BASE);
+		
+		File contentPath = pathManager.getFile(context, basePath);
+		if (!contentPath.exists()) {
+		    throw new IllegalArgumentException("Unable to find web agent static resources at "
+		            + contentPath);
+		}
+		contentPathString = contentPath.getAbsolutePath();
+		
 		executor = Executors.newCachedThreadPool(
 				new ThreadFactoryBuilder()
 				    .setNameFormat("agentWebAsync-%d")
@@ -49,17 +76,6 @@ public class InstrumentAgentWebImpl implements IAgentWebInterface {
 		}
 		return Response.ok(json).build();
 	}
-	
-	@Override
-	public Response listAgentsHtml() {
-		log.handle(Priority.INFO, "listAgentsHtml");
-		String html = "<!DOCTYPE html><html><body>\n";
-		for (String agent: agentMap.keySet()) {
-			html += "<p><a href=\"" + agent + "\">" + agent + "</a></p>";
-		}
-		html += "</body></html>";
-		return Response.ok(html).build();
-	}
 
 	@Override
 	public Response getAgent(String id) {
@@ -74,21 +90,6 @@ public class InstrumentAgentWebImpl implements IAgentWebInterface {
 			}
 		}
 		return Response.ok(agentNotFound(), MediaType.APPLICATION_JSON).build();
-	}
-	
-	@Override
-	public Response getAgentAsHtml(String id) {
-		log.handle(Priority.INFO, "getAgent: " + this);
-		final InstrumentAgent thisAgent = agentMap.get(id);
-		if (thisAgent != null) {
-			try {
-				return Response.ok(thisAgent.agentStateHtml()).build();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
-		return Response.ok(agentNotFound()).build();
 	}
 
 	@Override
@@ -310,6 +311,29 @@ public class InstrumentAgentWebImpl implements IAgentWebInterface {
 		}
 	}
 	
+	@Override
+	public Response getApp() {
+		try {
+			return Response.seeOther(new URI("instrument/app/index.html")).build();
+		} catch (URISyntaxException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return Response.noContent().build();
+		}
+	}
+	
+	@Override
+	public Response getStatic(String path) {
+		try {
+			String resource = new String(Files.readAllBytes(Paths.get(contentPathString, path)));
+			return Response.ok(resource).build();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return Response.noContent().build();
+		}
+	}
+
 	private String agentNotFound() {
 		// TODO
 		return "\"agent not found\"";

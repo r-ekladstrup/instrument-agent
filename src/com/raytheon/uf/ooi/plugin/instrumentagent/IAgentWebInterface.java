@@ -37,17 +37,12 @@ import javax.ws.rs.core.Response;
 public interface IAgentWebInterface {
 
     @GET
-    @Path("")
+    @Path("api")
     @Produces({ MediaType.APPLICATION_JSON })
     public Response listAgents();
-    
-    @GET
-    @Path("")
-    @Produces({ MediaType.TEXT_HTML })
-    public Response listAgentsHtml();
 
     @POST
-    @Path("{id}")
+    @Path("api/{id}")
     @Produces({ MediaType.APPLICATION_JSON })
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     public Response createAgent(
@@ -60,22 +55,18 @@ public interface IAgentWebInterface {
     		@FormParam("eventPort") int eventPort);
     
     @GET
-    @Path("{id}")
+    @Path("api/{id}")
     @Produces({ MediaType.APPLICATION_JSON })
     public Response getAgent(@PathParam("id") String id);
     
-    @GET
-    @Path("{id}")
-    @Produces({ MediaType.TEXT_HTML })
-    public Response getAgentAsHtml(@PathParam("id") String id);
     
     @DELETE
-    @Path("{id}")
+    @Path("api/{id}")
     @Produces({ MediaType.APPLICATION_JSON })
     public Response deleteAgent(@PathParam("id") String id);
     
     @GET
-    @Path("{id}/ping")
+    @Path("api/{id}/ping")
     @Produces({ MediaType.APPLICATION_JSON })
     public void ping(
     		@Suspended final AsyncResponse asyncResponse,
@@ -83,7 +74,7 @@ public interface IAgentWebInterface {
     		@DefaultValue("1000") @QueryParam("timeout") int timeout);
     
     @POST
-    @Path("{id}/initialize")
+    @Path("api/{id}/initialize")
     @Produces({ MediaType.APPLICATION_JSON })
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     public void initialize(
@@ -93,7 +84,7 @@ public interface IAgentWebInterface {
     		@DefaultValue("1000") @FormParam("timeout") int timeout);
     
     @POST
-    @Path("{id}/configure")
+    @Path("api/{id}/configure")
     @Produces({ MediaType.APPLICATION_JSON })
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     public void configure(
@@ -103,7 +94,7 @@ public interface IAgentWebInterface {
     		@DefaultValue("1") @FormParam("timeout") int timeout);
     
     @POST
-    @Path("{id}/connect")
+    @Path("api/{id}/connect")
     @Produces({ MediaType.APPLICATION_JSON })
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     public void connect(
@@ -112,7 +103,7 @@ public interface IAgentWebInterface {
     		@DefaultValue("60000") @FormParam("timeout") int timeout);
     
     @POST
-    @Path("{id}/discover")
+    @Path("api/{id}/discover")
     @Produces({ MediaType.APPLICATION_JSON })
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     public void discover(
@@ -121,7 +112,7 @@ public interface IAgentWebInterface {
     		@DefaultValue("600000") @FormParam("timeout") int timeout);
     
     @GET
-    @Path("{id}/metadata")
+    @Path("api/{id}/metadata")
     @Produces({ MediaType.APPLICATION_JSON })
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     public void getMetadata(
@@ -130,7 +121,7 @@ public interface IAgentWebInterface {
     		@DefaultValue("1000") @QueryParam("timeout") int timeout);
     
     @GET
-    @Path("{id}/capabilities")
+    @Path("api/{id}/capabilities")
     @Produces({ MediaType.APPLICATION_JSON })
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     public void getCapabilities(
@@ -139,7 +130,7 @@ public interface IAgentWebInterface {
     		@DefaultValue("1000") @QueryParam("timeout") int timeout);
     
     @GET
-    @Path("{id}/state")
+    @Path("api/{id}/state")
     @Produces({ MediaType.APPLICATION_JSON })
     public void getState(
     		@Suspended final AsyncResponse asyncResponse,
@@ -147,7 +138,7 @@ public interface IAgentWebInterface {
     		@DefaultValue("1000") @QueryParam("timeout") int timeout);
     
     @GET
-    @Path("{id}/resource")
+    @Path("api/{id}/resource")
     @Produces({ MediaType.APPLICATION_JSON })
     public void getResource(
     		@Suspended final AsyncResponse asyncResponse,
@@ -156,7 +147,7 @@ public interface IAgentWebInterface {
     		@DefaultValue("60000") @QueryParam("timeout") int timeout);
     
     @POST
-    @Path("{id}/resource")
+    @Path("api/{id}/resource")
     @Produces({ MediaType.APPLICATION_JSON })
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     public void setResource(
@@ -166,7 +157,7 @@ public interface IAgentWebInterface {
     		@DefaultValue("60000") @FormParam("timeout") int timeout);
     
     @POST
-    @Path("{id}/execute")
+    @Path("api/{id}/execute")
     @Produces({ MediaType.APPLICATION_JSON })
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     public void execute(
@@ -175,5 +166,13 @@ public interface IAgentWebInterface {
     		@FormParam("command") String resource,
     		@FormParam("kwargs") String kwargs,
     		@DefaultValue("60000") @FormParam("timeout") int timeout);
+    
+    @GET
+	@Path("app")
+	public Response getApp();
+    
+    @GET
+	@Path("app/{path:.*}")
+	public Response getStatic(@PathParam("path") String path);
     
 }

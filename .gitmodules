@@ -1,0 +1,6 @@
+[submodule "utility/edex_static/base/ooi/instruments/mi-instrument"]
+	path = utility/edex_static/base/ooi/instruments/mi-instrument
+	url = https://github.com/oceanobservatories/mi-instrument
+[submodule "utility/edex_static/base/ooi/instruments/agent-web"]
+	path = utility/edex_static/base/ooi/instruments/agent-web
+	url = https://github.com/oceanobservatories/agent-web

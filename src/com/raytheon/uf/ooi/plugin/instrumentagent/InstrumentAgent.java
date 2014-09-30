@@ -10,6 +10,12 @@ import java.util.Map;
 
 import org.apache.camel.ProducerTemplate;
 
+import com.raytheon.uf.common.localization.IPathManager;
+import com.raytheon.uf.common.localization.LocalizationContext;
+import com.raytheon.uf.common.localization.PathManager;
+import com.raytheon.uf.common.localization.PathManagerFactory;
+import com.raytheon.uf.common.localization.LocalizationContext.LocalizationLevel;
+import com.raytheon.uf.common.localization.LocalizationContext.LocalizationType;
 import com.raytheon.uf.common.status.IUFStatusHandler;
 import com.raytheon.uf.common.status.UFStatus;
 import com.raytheon.uf.common.status.UFStatus.Priority;
@@ -18,7 +24,7 @@ public class InstrumentAgent {
 	protected IUFStatusHandler status = UFStatus.getHandler(Ingest.class);
 	
 	private String sensor;
-	private String miPath = "/home/race/mi-instrument";
+	private String miPath = "ooi/instruments/mi-instrument";
 	private String driverModule;
 	private String driverKlass;
 	private String driverHost;
@@ -66,11 +72,21 @@ public class InstrumentAgent {
 	}
 	
     public void runDriver() throws Exception {
-        String[] args = {"python", miPath + "/main.py", driverModule, driverKlass,
+    	IPathManager pathManager = PathManagerFactory.getPathManager();
+    	LocalizationContext context = pathManager.getContext(LocalizationType.EDEX_STATIC,
+                LocalizationLevel.BASE);
+
+        File baseDir = pathManager.getFile(context, miPath);
+        if (!baseDir.exists()) {
+            throw new IllegalArgumentException("Unable to find instrument drivers at "
+                    + baseDir);
+        }
+        
+        String[] args = {"python", "main.py", driverModule, driverKlass,
         		Integer.toString(commandPort), Integer.toString(eventPort) };
         status.handle(Priority.INFO, "Launching Instrument Driver with args: " + Arrays.asList(args).toString());
         ProcessBuilder pb = new ProcessBuilder(args);
-        pb.directory(new File(miPath));
+        pb.directory(baseDir);
         pb.inheritIO();
         process = pb.start();
     }

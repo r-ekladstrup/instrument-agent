@@ -15,4 +15,4 @@ Require-Bundle: com.raytheon.uf.common.status;bundle-version="1.12.1174",
  org.apache.commons.cxf;bundle-version="2.7.11",
  com.google.guava,
  org.zeromq;bundle-version="1.0.0",
- org.rendersnake;bundle-version="1.0.0"
+ com.raytheon.uf.common.localization
