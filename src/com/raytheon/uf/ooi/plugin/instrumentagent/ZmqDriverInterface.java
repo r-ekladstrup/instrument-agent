@@ -2,6 +2,8 @@ package com.raytheon.uf.ooi.plugin.instrumentagent;
 
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
+import org.zeromq.ZMQ.PollItem;
+import org.zeromq.ZMQ.Poller;
 
 import com.raytheon.uf.common.status.UFStatus.Priority;
 
@@ -17,28 +19,23 @@ public class ZmqDriverInterface extends AbstractDriverInterface {
     private String host;
     private int commandPort;
     private int eventPort;
+    private String eventUrl;
+    private String commandUrl;
 
 	public ZmqDriverInterface(String host, int commandPort, int eventPort) {
 		this.host = host;
 		this.commandPort = commandPort;
 		this.eventPort = eventPort;
+		commandUrl = String.format("tcp://%s:%d", host, commandPort);
+        eventUrl = String.format("tcp://%s:%d", host, eventPort);
 	}
 	
 	public void connect() {
-        String commandUrl = String.format("tcp://%s:%d", host, commandPort);
-        String eventUrl = String.format("tcp://%s:%d", host, eventPort);
-        
         status.handle(Priority.INFO, "Initialize ZmqDriverInterface");
         context = new ZContext();
         
-        status.handle(Priority.INFO, "Connecting to command port: {}", commandUrl);
-        commandSocket = context.createSocket(ZMQ.REQ);
-        commandSocket.connect(commandUrl);
-
-        status.handle(Priority.INFO, "Connecting to event port: {}", eventUrl);
-        eventSocket = context.createSocket(ZMQ.SUB);
-        eventSocket.connect(eventUrl);
-        eventSocket.subscribe(new byte[0]);
+        connectCommand();
+        connectEvent();
         
         status.handle(Priority.INFO, "Connected, starting event loop");
         Thread t = new Thread() {
@@ -50,20 +47,48 @@ public class ZmqDriverInterface extends AbstractDriverInterface {
         t.setName("Event Loop " + eventUrl);
         t.start();
     }
+	
+	private void connectCommand() {
+		status.handle(Priority.INFO, "Connecting to command port: {}", commandUrl);
+        commandSocket = context.createSocket(ZMQ.REQ);
+        commandSocket.connect(commandUrl);
+	}
+	
+	private void connectEvent() {
+		status.handle(Priority.INFO, "Connecting to event port: {}", eventUrl);
+        eventSocket = context.createSocket(ZMQ.SUB);
+        eventSocket.connect(eventUrl);
+        eventSocket.subscribe(new byte[0]);
+	}
 
 	@Override
-    protected String sendCommand(String command, int timeout) {
+    protected String _sendCommand(String command, int timeout) {
+		status.handle(Priority.INFO, "Sending command: " + command + " with timeout: " + timeout);
+		// Send the command
         commandSocket.send(command);
-        commandSocket.setReceiveTimeOut(timeout * 1000);
-        String reply = commandSocket.recvStr();
-        if (reply == null)
+		
+        // Get the response
+        PollItem items[] = {new PollItem(commandSocket, Poller.POLLIN)};
+        int rc = ZMQ.poll(items, timeout);
+        
+        if (rc == -1)
+        	// INTERRUPTED / TODO
+        	return null;
+        String reply = null;
+        if (items[0].isReadable()) {
+        	reply = commandSocket.recvStr();
+        }
+        if (reply == null) {
             status.handle(Priority.INFO, "Empty message received from command: {}", command);
+        	connectCommand();
+        }
+  
         return reply;
     }
     
 	@Override
-	protected String sendCommand(String command) {
-		return sendCommand(command, DEFAULT_TIMEOUT);
+	protected String _sendCommand(String command) {
+		return _sendCommand(command, DEFAULT_TIMEOUT);
 	}
 
     protected void eventLoop() {

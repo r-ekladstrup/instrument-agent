@@ -27,6 +27,7 @@ public class Constants {
     public final static String GET_CAPABILITIES         = "get_resource_capabilities";
     public final static String EXECUTE_RESOURCE         = "execute_resource";
     public final static String STOP_DRIVER              = "stop_driver_process";
+    public final static int    DEFAULT_TIMEOUT			= 600;
 
     // Driver States
     public final static String DRIVER_STATE_UNCONFIGURED = "DRIVER_STATE_UNCONFIGURED";
