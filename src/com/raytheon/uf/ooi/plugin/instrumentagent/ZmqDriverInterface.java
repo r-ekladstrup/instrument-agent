@@ -16,28 +16,20 @@ public class ZmqDriverInterface extends AbstractDriverInterface {
     private ZMQ.Socket commandSocket;
     private ZMQ.Socket eventSocket;
     private boolean keepRunning = true;
-    private String host;
-    private int commandPort;
-    private int eventPort;
     private String eventUrl;
     private String commandUrl;
 
 	public ZmqDriverInterface(String host, int commandPort, int eventPort) {
-		this.host = host;
-		this.commandPort = commandPort;
-		this.eventPort = eventPort;
 		commandUrl = String.format("tcp://%s:%d", host, commandPort);
         eventUrl = String.format("tcp://%s:%d", host, eventPort);
 	}
 	
 	public void connect() {
-        status.handle(Priority.INFO, "Initialize ZmqDriverInterface");
         context = new ZContext();
         
         connectCommand();
         connectEvent();
         
-        status.handle(Priority.INFO, "Connected, starting event loop");
         Thread t = new Thread() {
         	public void run() {
         		eventLoop();
@@ -72,7 +64,7 @@ public class ZmqDriverInterface extends AbstractDriverInterface {
         int rc = ZMQ.poll(items, timeout);
         
         if (rc == -1)
-        	// INTERRUPTED / TODO
+        	// INTERRUPTED
         	return null;
         String reply = null;
         if (items[0].isReadable()) {
@@ -97,7 +89,6 @@ public class ZmqDriverInterface extends AbstractDriverInterface {
 	            String reply = eventSocket.recvStr();
 	
 	            if (reply != null) {
-	                status.handle(Priority.INFO, "REPLY = " + reply);
 	                try {
 	                	setChanged();
 	                	notifyObservers(reply);

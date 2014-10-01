@@ -91,13 +91,32 @@ public interface IAgentWebInterface {
     		@Suspended final AsyncResponse asyncResponse,
     		@PathParam("id") String id,
     		@FormParam("config") String config,
-    		@DefaultValue("1") @FormParam("timeout") int timeout);
+    		@DefaultValue("1000") @FormParam("timeout") int timeout);
+    
+    @POST
+    @Path("api/{id}/initparams")
+    @Produces({ MediaType.APPLICATION_JSON })
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    public void initParams(
+    		@Suspended final AsyncResponse asyncResponse,
+    		@PathParam("id") String id,
+    		@FormParam("config") String config,
+    		@DefaultValue("1000") @FormParam("timeout") int timeout);
     
     @POST
     @Path("api/{id}/connect")
     @Produces({ MediaType.APPLICATION_JSON })
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     public void connect(
+    		@Suspended final AsyncResponse asyncResponse,
+    		@PathParam("id") String id,
+    		@DefaultValue("60000") @FormParam("timeout") int timeout);
+    
+    @POST
+    @Path("api/{id}/disconnect")
+    @Produces({ MediaType.APPLICATION_JSON })
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    public void disconnect(
     		@Suspended final AsyncResponse asyncResponse,
     		@PathParam("id") String id,
     		@DefaultValue("60000") @FormParam("timeout") int timeout);

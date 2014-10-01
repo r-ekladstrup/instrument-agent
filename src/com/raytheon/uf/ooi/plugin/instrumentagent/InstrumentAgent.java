@@ -58,11 +58,9 @@ public class InstrumentAgent {
 		driverInterface.deleteObservers();
 		driverInterface.addObserver(eventListener);
 		driverInterface.connect();
-		String reply = ping(2000);
 		getMetadata(2000);
 		getState(2000);
 		getCapabilities(2000);
-		status.handle(Priority.INFO, "Agent received reply from driver: " + reply);
 	}
 	
 	public void killDriver() {
@@ -128,31 +126,6 @@ public class InstrumentAgent {
     	return JsonHelper.toJson(map);
     }
     
-    public String agentStateHtml() throws IOException {
-    	String html = "<!DOCTYPE html><html><body>\n";
-    	html += "<h1>" + sensor + "</h1>";
-    	html += "<hr>";
-    	html += "<p>State: " + state + "</p>";
-    	html += "<p>Command Metadata:</p>";
-    	@SuppressWarnings("unchecked")
-		Map<String, Object> commandMetadata = (Map<String, Object>) metadata.get("commands");
-    	for (String command: commandMetadata.keySet()) {
-    		// TODO
-    		html += "<p>" + command + "</p>";
-    	}
-    	html += "<p>Capabilities:</p>";
-    	for (Object capability: capabilities) {
-    		if (capability instanceof String) {
-    			html += "<p>" + capability + "</p>";
-    		}
-    	}
-    	
-    	html += "<p>Resources:</p>";
-		html += "</body></html>";
-		
-    	return html;
-    }
-    
     public String ping(int timeout) {
     	return sendCommand(Constants.PING, "PONG", timeout);
     }
@@ -165,8 +138,16 @@ public class InstrumentAgent {
     	return sendCommand(Constants.CONFIGURE, config, timeout);
     }
     
+    public String initParams(String config, int timeout) {
+    	return sendCommand(Constants.SET_INIT_PARAMS, config, timeout);
+    }
+    
     public String connect(int timeout) {
     	return sendCommand(Constants.CONNECT, timeout);
+    }
+    
+    public String disconnect(int timeout) {
+    	return sendCommand(Constants.DISCONNECT, timeout);
     }
     
     public String discover(int timeout) {
@@ -248,7 +229,9 @@ public class InstrumentAgent {
     }
     
     public String execute(String args, String kwargs, int timeout) {
-    	return sendCommand(Constants.EXECUTE_RESOURCE, args, kwargs, timeout);
+    	String reply = sendCommand(Constants.EXECUTE_RESOURCE, args, kwargs, timeout);
+    	getCapabilities(2000);
+    	return reply;
     }
 
 	public Map<String, Object> getResources() {
