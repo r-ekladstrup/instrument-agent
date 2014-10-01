@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 public class JsonHelper {
-    private final static ObjectMapper mapper = new ObjectMapper();
+    private static final ObjectMapper mapper = new ObjectMapper();
     protected static final TypeReference<Map<String, Object>> mapType =
     		new TypeReference<Map<String, Object>>() {};
 	protected static final TypeReference<List<Object>> listType =
@@ -20,6 +20,7 @@ public class JsonHelper {
         //mapper.configure(JsonParser.Feature.ALLOW_NON_NUMERIC_NUMBERS, true);
         //mapper.configure(JsonGenerator.Feature.QUOTE_NON_NUMERIC_NUMBERS, false);
     }
+    
     private JsonHelper() {}
 
     public static String toJson(Object obj) throws IOException {

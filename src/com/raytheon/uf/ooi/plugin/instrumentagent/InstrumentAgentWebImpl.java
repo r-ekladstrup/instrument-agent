@@ -79,7 +79,7 @@ public class InstrumentAgentWebImpl implements IAgentWebInterface {
 
 	@Override
 	public Response getAgent(String id) {
-		log.handle(Priority.INFO, "getAgent: " + this);
+		log.handle(Priority.INFO, "getAgent: " + id);
 		final InstrumentAgent thisAgent = agentMap.get(id);
 		if (thisAgent != null) {
 			try {
@@ -172,6 +172,23 @@ public class InstrumentAgentWebImpl implements IAgentWebInterface {
 			asyncResponse.resume(agentNotFound());
 		}
 	}
+	
+	@Override
+	public void initParams(final AsyncResponse asyncResponse, final String id,
+			final String config, final int timeout) {
+		final InstrumentAgent thisAgent = agentMap.get(id);
+		if (thisAgent != null) {
+			executor.execute(new Runnable() {
+				@Override
+				public void run() {
+					String reply = thisAgent.initParams(config, timeout);
+					asyncResponse.resume(Response.ok(reply).type(MediaType.APPLICATION_JSON).build());
+				}
+			});
+		} else {
+			asyncResponse.resume(agentNotFound());
+		}
+	}
 
 	@Override
 	public void connect(final AsyncResponse asyncResponse, final String id, final int timeout) {
@@ -181,6 +198,23 @@ public class InstrumentAgentWebImpl implements IAgentWebInterface {
 				@Override
 				public void run() {
 					String reply = thisAgent.connect(timeout);
+					asyncResponse.resume(Response.ok(reply).type(MediaType.APPLICATION_JSON).build());
+				}
+			});
+		} else {
+			asyncResponse.resume(agentNotFound());
+		}
+	}
+	
+
+	@Override
+	public void disconnect(final AsyncResponse asyncResponse, final String id, final int timeout) {
+		final InstrumentAgent thisAgent = agentMap.get(id);
+		if (thisAgent != null) {
+			executor.execute(new Runnable() {
+				@Override
+				public void run() {
+					String reply = thisAgent.disconnect(timeout);
 					asyncResponse.resume(Response.ok(reply).type(MediaType.APPLICATION_JSON).build());
 				}
 			});

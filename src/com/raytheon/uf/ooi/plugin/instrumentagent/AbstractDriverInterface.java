@@ -33,7 +33,7 @@ public abstract class AbstractDriverInterface extends Observable {
     
     protected String sendCommand(String command, String args, String kwargs, int timeout) {
     	String json = "{\"cmd\": \"" + command + "\", \"args\": " + args + ", \"kwargs\": " + kwargs + "}";
-    	status.handle(Priority.INFO, "Preparing to send: " + json);
+    	status.handle(Priority.DEBUG, "Preparing to send: " + json);
     	try {
     		// parse json to verify validity prior to sending...
     		JsonHelper.toMap(json);
