@@ -18,6 +18,7 @@ public class ZmqDriverInterface extends AbstractDriverInterface {
     private boolean keepRunning = true;
     private String eventUrl;
     private String commandUrl;
+    private final int commandTimeout = 10000;
 
 	public ZmqDriverInterface(String host, int commandPort, int eventPort) {
 		commandUrl = String.format("tcp://%s:%d", host, commandPort);
@@ -54,14 +55,14 @@ public class ZmqDriverInterface extends AbstractDriverInterface {
 	}
 
 	@Override
-    protected String _sendCommand(String command, int timeout) {
-		status.handle(Priority.INFO, "Sending command: " + command + " with timeout: " + timeout);
+    protected String _sendCommand(String command) {
+		status.handle(Priority.INFO, "Sending command: " + command);
 		// Send the command
         commandSocket.send(command);
 		
         // Get the response
         PollItem items[] = {new PollItem(commandSocket, Poller.POLLIN)};
-        int rc = ZMQ.poll(items, timeout);
+        int rc = ZMQ.poll(items, commandTimeout);
         
         if (rc == -1)
         	// INTERRUPTED
@@ -69,6 +70,7 @@ public class ZmqDriverInterface extends AbstractDriverInterface {
         String reply = null;
         if (items[0].isReadable()) {
         	reply = commandSocket.recvStr();
+        	status.handle(Priority.INFO, "ZMQ received: " + reply);
         }
         if (reply == null) {
             status.handle(Priority.INFO, "Empty message received from command: {}", command);
@@ -77,17 +79,12 @@ public class ZmqDriverInterface extends AbstractDriverInterface {
   
         return reply;
     }
-    
-	@Override
-	protected String _sendCommand(String command) {
-		return _sendCommand(command, DEFAULT_TIMEOUT);
-	}
 
     protected void eventLoop() {
         while (keepRunning) {
         	try {
 	            String reply = eventSocket.recvStr();
-	
+	            status.handle(Priority.INFO, "ZMQ received: " + reply);
 	            if (reply != null) {
 	                try {
 	                	setChanged();

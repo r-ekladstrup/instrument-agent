@@ -54,10 +54,19 @@ public interface IAgentWebInterface {
     		@FormParam("commandPort") int commandPort,
     		@FormParam("eventPort") int eventPort);
     
+    @POST
+    @Path("api/{id}")
+    @Produces({ MediaType.APPLICATION_JSON })
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response createAgentJson(@PathParam("id") String id, String agent);
+    
     @GET
     @Path("api/{id}")
     @Produces({ MediaType.APPLICATION_JSON })
-    public Response getAgent(@PathParam("id") String id);
+    public void getAgent(
+    		@Suspended final AsyncResponse asyncResponse,
+    		@PathParam("id") String id,
+    		@DefaultValue("0.0") @QueryParam("timestamp") final double timestamp);
     
     
     @DELETE

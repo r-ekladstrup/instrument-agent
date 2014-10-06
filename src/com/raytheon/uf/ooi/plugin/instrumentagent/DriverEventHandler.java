@@ -31,10 +31,9 @@ public class DriverEventHandler implements Observer {
         try {
 			Map<String, Object> event = JsonHelper.toMap((String) arg);
             switch ((String)event.get("type")) {
+            	case Constants.CONFIG_CHANGE_EVENT:
                 case Constants.STATE_CHANGE_EVENT:
-                    agent.setState((String) event.get("value"));
-                    // new state, request capabilities
-                    agent.getCapabilities(2000);
+                    agent.getOverallState();
                     break;
                 case Constants.SAMPLE_EVENT:
                 	Map<String, Object> particle =
@@ -46,11 +45,10 @@ public class DriverEventHandler implements Observer {
                 		producer.sendBodyAndHeader(particle, "sensor", sensor);
                 	}
                     break;
-                case Constants.CONFIG_CHANGE_EVENT:
-                	@SuppressWarnings("unchecked")
-					Map<String, Object> resources = (Map<String, Object>) event.get("value");
-                	agent.setResources(resources);
-                    break;
+                case Constants.DRIVER_ASYNC_EVENT:
+                	int transactionId = (int) event.get("transaction_id");
+                	this.agent.transactionMap.put(transactionId, (String) arg);
+                	break;
             }
         } catch (IOException e) {
             e.printStackTrace();

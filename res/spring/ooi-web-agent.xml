@@ -21,6 +21,9 @@
         <jaxrs:serviceBeans>
             <ref bean="agentWeb" />
         </jaxrs:serviceBeans>
+        <jaxrs:providers>
+            <ref bean="localizationCxfJaxrsCorsFilter" />
+		</jaxrs:providers>
     </jaxrs:server>
     
     <bean id="ingest"
