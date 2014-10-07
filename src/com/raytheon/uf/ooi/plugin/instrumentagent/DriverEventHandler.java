@@ -46,6 +46,7 @@ public class DriverEventHandler implements Observer {
                 	}
                     break;
                 case Constants.DRIVER_ASYNC_EVENT:
+                case Constants.DRIVER_EXCEPTION:
                 	int transactionId = (int) event.get("transaction_id");
                 	this.agent.transactionMap.put(transactionId, (String) arg);
                 	break;

@@ -19,6 +19,7 @@ public class ZmqDriverInterface extends AbstractDriverInterface {
     private String eventUrl;
     private String commandUrl;
     private final int commandTimeout = 10000;
+    private final int eventTimeout = 1000;
 
 	public ZmqDriverInterface(String host, int commandPort, int eventPort) {
 		commandUrl = String.format("tcp://%s:%d", host, commandPort);
@@ -27,6 +28,7 @@ public class ZmqDriverInterface extends AbstractDriverInterface {
 	
 	public void connect() {
         context = new ZContext();
+        context.setLinger(0);
         
         connectCommand();
         connectEvent();
@@ -45,6 +47,7 @@ public class ZmqDriverInterface extends AbstractDriverInterface {
 		status.handle(Priority.INFO, "Connecting to command port: {}", commandUrl);
         commandSocket = context.createSocket(ZMQ.REQ);
         commandSocket.connect(commandUrl);
+        commandSocket.setLinger(0);
 	}
 	
 	private void connectEvent() {
@@ -52,10 +55,11 @@ public class ZmqDriverInterface extends AbstractDriverInterface {
         eventSocket = context.createSocket(ZMQ.SUB);
         eventSocket.connect(eventUrl);
         eventSocket.subscribe(new byte[0]);
+        eventSocket.setLinger(0);
 	}
 
 	@Override
-    protected String _sendCommand(String command) {
+    protected synchronized String _sendCommand(String command) {
 		status.handle(Priority.INFO, "Sending command: " + command);
 		// Send the command
         commandSocket.send(command);
@@ -83,8 +87,14 @@ public class ZmqDriverInterface extends AbstractDriverInterface {
     protected void eventLoop() {
         while (keepRunning) {
         	try {
-	            String reply = eventSocket.recvStr();
-	            status.handle(Priority.INFO, "ZMQ received: " + reply);
+        		PollItem items[] = {new PollItem(eventSocket, Poller.POLLIN)};
+                ZMQ.poll(items, eventTimeout);
+                
+                String reply = null;
+                if (items[0].isReadable()) {
+                	reply = eventSocket.recvStr();
+                	status.handle(Priority.INFO, "ZMQ received: " + reply);
+                }
 	            if (reply != null) {
 	                try {
 	                	setChanged();
@@ -94,8 +104,6 @@ public class ZmqDriverInterface extends AbstractDriverInterface {
 	                    e.printStackTrace();
 	                    status.handle(Priority.ERROR, ("Exception notifying observers: " + e.getMessage()));
 	                }
-	            } else {
-	                status.handle(Priority.INFO, "Empty message received in event loop");
 	            }
         	} catch (Exception e) {
 	        	status.handle(Priority.ERROR, "Exception in event loop: " + e);
@@ -105,12 +113,13 @@ public class ZmqDriverInterface extends AbstractDriverInterface {
 
     public void shutdown() {
         keepRunning = false;
-        if (eventSocket != null)
-        	eventSocket.close();
-        if (commandSocket != null)
-        	commandSocket.close();
-        if (context != null)
-        	context.close();
+        if (context != null) {
+        	status.handle(Priority.INFO, "Closing ZMQ context");
+        	for (ZMQ.Socket socket: context.getSockets()) {
+        		socket.setLinger(0);
+        		socket.close();
+        	}
+        }
     }
 
 }

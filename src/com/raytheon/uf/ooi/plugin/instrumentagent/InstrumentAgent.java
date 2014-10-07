@@ -85,6 +85,8 @@ public class InstrumentAgent {
 		status.handle(Priority.INFO, "Killing driver process: " + sensor);
 		if (process != null)
 			process.destroy();
+		if (driverInterface != null)
+			driverInterface.shutdown();
 	}
 	
     public void runDriver() throws Exception {
@@ -110,22 +112,17 @@ public class InstrumentAgent {
     protected String handleResponse(String reply, int timeout) {
     	try {
 			Map<String, Object> driverReply = JsonHelper.toMap(reply);
-			status.handle(Priority.INFO, "reply= " + driverReply);
-			for (String key: driverReply.keySet())
-				status.handle(Priority.INFO, "key= " + key + " value=" + driverReply.get(key));
 			String replyType = (String) driverReply.get("type");
 			switch (replyType) {
 				case Constants.DRIVER_ASYNC_FUTURE:
 					int transactionId = (int) driverReply.get("value");
 					return waitForReply(transactionId, timeout);
 				case Constants.DRIVER_SYNC_EVENT:
-					status.handle(Priority.INFO, "Driver synchronous event");
 					Object commandMapObject = driverReply.get("cmd");
-					status.handle(Priority.INFO, "Command map: " + commandMapObject);
 					if (commandMapObject instanceof Map) {
-						Map commandMap = (Map) commandMapObject;
+						@SuppressWarnings("unchecked")
+						Map<String, Object> commandMap = (Map<String, Object>) commandMapObject;
 						String command = (String) commandMap.get("cmd");
-						status.handle(Priority.INFO, "Command = " + command);
 						if (command.equals("overall_state"))
 							synchronized(cachedStateMonitor) {
 								cachedState = reply;
@@ -146,8 +143,9 @@ public class InstrumentAgent {
     }
     
     private String waitForReply(int transactionId, int timeout) {
+    	status.handle(Priority.INFO, "waitForReply, transactionId: " + transactionId + " timeout: " + timeout);
     	long expireTime = System.currentTimeMillis() + timeout;
-    	while (System.currentTimeMillis() > expireTime) {
+    	while (System.currentTimeMillis() < expireTime) {
     		if (transactionMap.containsKey(transactionId)) {
     			return transactionMap.remove(transactionId);
     		}
