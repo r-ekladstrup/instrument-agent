@@ -54,10 +54,19 @@ public interface IAgentWebInterface {
     		@FormParam("commandPort") int commandPort,
     		@FormParam("eventPort") int eventPort);
     
+    @POST
+    @Path("api/{id}")
+    @Produces({ MediaType.APPLICATION_JSON })
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response createAgentJson(@PathParam("id") String id, String agent);
+    
     @GET
     @Path("api/{id}")
     @Produces({ MediaType.APPLICATION_JSON })
-    public Response getAgent(@PathParam("id") String id);
+    public void getAgent(
+    		@Suspended final AsyncResponse asyncResponse,
+    		@PathParam("id") String id,
+    		@DefaultValue("0.0") @QueryParam("timestamp") final double timestamp);
     
     
     @DELETE
@@ -71,7 +80,7 @@ public interface IAgentWebInterface {
     public void ping(
     		@Suspended final AsyncResponse asyncResponse,
     		@PathParam("id") String id,
-    		@DefaultValue("1000") @QueryParam("timeout") int timeout);
+    		@DefaultValue("2000") @QueryParam("timeout") int timeout);
     
     @POST
     @Path("api/{id}/initialize")
@@ -81,7 +90,7 @@ public interface IAgentWebInterface {
     		@Suspended final AsyncResponse asyncResponse,
     		@PathParam("id") String id,
     		@FormParam("config") String config,
-    		@DefaultValue("1000") @FormParam("timeout") int timeout);
+    		@DefaultValue("2000") @FormParam("timeout") int timeout);
     
     @POST
     @Path("api/{id}/configure")
@@ -91,7 +100,7 @@ public interface IAgentWebInterface {
     		@Suspended final AsyncResponse asyncResponse,
     		@PathParam("id") String id,
     		@FormParam("config") String config,
-    		@DefaultValue("1000") @FormParam("timeout") int timeout);
+    		@DefaultValue("2000") @FormParam("timeout") int timeout);
     
     @POST
     @Path("api/{id}/initparams")
@@ -101,7 +110,7 @@ public interface IAgentWebInterface {
     		@Suspended final AsyncResponse asyncResponse,
     		@PathParam("id") String id,
     		@FormParam("config") String config,
-    		@DefaultValue("1000") @FormParam("timeout") int timeout);
+    		@DefaultValue("2000") @FormParam("timeout") int timeout);
     
     @POST
     @Path("api/{id}/connect")
@@ -137,7 +146,7 @@ public interface IAgentWebInterface {
     public void getMetadata(
     		@Suspended final AsyncResponse asyncResponse,
     		@PathParam("id") String id,
-    		@DefaultValue("1000") @QueryParam("timeout") int timeout);
+    		@DefaultValue("2000") @QueryParam("timeout") int timeout);
     
     @GET
     @Path("api/{id}/capabilities")
@@ -146,7 +155,7 @@ public interface IAgentWebInterface {
     public void getCapabilities(
     		@Suspended final AsyncResponse asyncResponse,
     		@PathParam("id") String id,
-    		@DefaultValue("1000") @QueryParam("timeout") int timeout);
+    		@DefaultValue("2000") @QueryParam("timeout") int timeout);
     
     @GET
     @Path("api/{id}/state")
@@ -154,7 +163,7 @@ public interface IAgentWebInterface {
     public void getState(
     		@Suspended final AsyncResponse asyncResponse,
     		@PathParam("id") String id,
-    		@DefaultValue("1000") @QueryParam("timeout") int timeout);
+    		@DefaultValue("2000") @QueryParam("timeout") int timeout);
     
     @GET
     @Path("api/{id}/resource")

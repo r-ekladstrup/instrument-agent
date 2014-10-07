@@ -38,6 +38,11 @@ public class Constants {
     public final static String STATE_CHANGE_EVENT       = "DRIVER_ASYNC_EVENT_STATE_CHANGE";
     public final static String SAMPLE_EVENT             = "DRIVER_ASYNC_EVENT_SAMPLE";
     public final static String CONFIG_CHANGE_EVENT      = "DRIVER_ASYNC_EVENT_CONFIG_CHANGE";
+    public final static String DRIVER_SYNC_EVENT 		= "DRIVER_SYNCHRONOUS_EVENT_REPLY";
+    public final static String DRIVER_ASYNC_EVENT 		= "DRIVER_AYSNC_EVENT_REPLY";
+    public final static String DRIVER_ASYNC_FUTURE 		= "DRIVER_ASYNC_EVENT_FUTURE";
+	public final static String DRIVER_BUSY 				= "DRIVER_BUSY_EVENT";
+    public final static String DRIVER_EXCEPTION 		= "DRIVER_EXCEPTION_EVENT";
 
     // Driver Streams
     public static final String STREAM_NAME              = "stream_name";

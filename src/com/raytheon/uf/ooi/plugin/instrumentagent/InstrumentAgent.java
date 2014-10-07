@@ -7,12 +7,12 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.camel.ProducerTemplate;
 
 import com.raytheon.uf.common.localization.IPathManager;
 import com.raytheon.uf.common.localization.LocalizationContext;
-import com.raytheon.uf.common.localization.PathManager;
 import com.raytheon.uf.common.localization.PathManagerFactory;
 import com.raytheon.uf.common.localization.LocalizationContext.LocalizationLevel;
 import com.raytheon.uf.common.localization.LocalizationContext.LocalizationType;
@@ -33,15 +33,14 @@ public class InstrumentAgent {
 	private Process process;
 	private AbstractDriverInterface driverInterface;
 	private DriverEventHandler eventListener;
-	
-	private Map<String, Object> metadata = new HashMap<>();
-	private String state = "";
-	private List<Object> capabilities = new ArrayList<>();
-	private Map<String, Object> resources = new HashMap<>();
+	protected Map<Integer, String> transactionMap = new ConcurrentHashMap<>();
+	private final Object cachedStateMonitor = new Object();
+	private String cachedState;
+	private double cachedStateTime;
 	
 	public InstrumentAgent(String sensor, String driverModule,
 			String driverKlass, String driverHost, int commandPort,
-			int eventPort, ProducerTemplate producer) {
+			int eventPort, ProducerTemplate producer) throws Exception {
 		this.sensor = sensor;
 		this.driverModule = driverModule;
 		this.driverKlass = driverKlass;
@@ -49,24 +48,45 @@ public class InstrumentAgent {
 		this.commandPort = commandPort;
 		this.eventPort = eventPort;
 		eventListener = new DriverEventHandler(this, producer, sensor);
+		startup();
+	}
+	
+	public InstrumentAgent(String id, String jsonDefinition, ProducerTemplate producer) throws Exception {
+		Map<String, Object> map = JsonHelper.toMap(jsonDefinition);
+		sensor = id;
+		driverModule = (String) map.get("module");
+		driverKlass = (String) map.get("klass");
+		driverHost = (String) map.get("host");
+		commandPort = (int) map.get("commandPort");
+		eventPort = (int) map.get("eventPort");
+		eventListener = new DriverEventHandler(this, producer, sensor);
+		startup();
+	}
+	
+	public void startup() throws Exception {
+		// TODO, check for running driver
+		runDriver();
+		connectDriver();
+		getOverallState();
 	}
 	
 	public void connectDriver() throws Exception {
 		if (process == null)
 			runDriver();
+		if (driverInterface != null)
+			driverInterface.shutdown();
 		driverInterface = new ZmqDriverInterface(driverHost, commandPort, eventPort);
 		driverInterface.deleteObservers();
 		driverInterface.addObserver(eventListener);
 		driverInterface.connect();
-		getMetadata(2000);
-		getState(2000);
-		getCapabilities(2000);
 	}
 	
 	public void killDriver() {
 		status.handle(Priority.INFO, "Killing driver process: " + sensor);
 		if (process != null)
 			process.destroy();
+		if (driverInterface != null)
+			driverInterface.shutdown();
 	}
 	
     public void runDriver() throws Exception {
@@ -89,24 +109,81 @@ public class InstrumentAgent {
         process = pb.start();
     }
     
-    protected String sendCommand(String command, String args, String kwargs, int timeout) {
-    	if (! args.startsWith("[")) {
-    		List<Object> argList = new ArrayList<>(1);
-    		try {
-    			argList.add(JsonHelper.toObject(args));
-    		} catch (Exception ignore) {
-    			argList.add(args);
+    protected String handleResponse(String reply, int timeout) {
+    	try {
+			Map<String, Object> driverReply = JsonHelper.toMap(reply);
+			String replyType = (String) driverReply.get("type");
+			switch (replyType) {
+				case Constants.DRIVER_ASYNC_FUTURE:
+					int transactionId = (int) driverReply.get("value");
+					return waitForReply(transactionId, timeout);
+				case Constants.DRIVER_SYNC_EVENT:
+					Object commandMapObject = driverReply.get("cmd");
+					if (commandMapObject instanceof Map) {
+						@SuppressWarnings("unchecked")
+						Map<String, Object> commandMap = (Map<String, Object>) commandMapObject;
+						String command = (String) commandMap.get("cmd");
+						if (command.equals("overall_state"))
+							synchronized(cachedStateMonitor) {
+								cachedState = reply;
+								cachedStateTime = (double) driverReply.get("time");
+								cachedStateMonitor.notifyAll();
+							}
+					}
+				case Constants.DRIVER_BUSY:
+				case Constants.DRIVER_EXCEPTION:
+				default:
+					return reply;
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return "exception";
+		}
+    }
+    
+    private String waitForReply(int transactionId, int timeout) {
+    	status.handle(Priority.INFO, "waitForReply, transactionId: " + transactionId + " timeout: " + timeout);
+    	long expireTime = System.currentTimeMillis() + timeout;
+    	while (System.currentTimeMillis() < expireTime) {
+    		if (transactionMap.containsKey(transactionId)) {
+    			return transactionMap.remove(transactionId);
     		}
     		try {
-				args = JsonHelper.toJson(argList);
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				Thread.sleep(100);
+			} catch (InterruptedException e) {
+				// ignore
 			}
     	}
-    	String reply = driverInterface.sendCommand(command, args, kwargs, timeout);
+    	// timed out
+    	// TODO, make this a proper reply or raise an Exception
+    	return "timed out";
+    }
+    
+    protected String sendCommand(String command, String args, String kwargs, int timeout) {
+    	String reply = driverInterface.sendCommand(command, args, kwargs);
     	status.handle(Priority.INFO, "Received reply from InstrumentDriver: " + reply);
-    	return reply;
+    	return handleResponse(reply, timeout);
+    }
+    
+    protected String getOverallState() {
+    	return sendCommand("overall_state", "[]", "{}", 0);
+    }
+    
+    protected String getOverallStateChanged(double timestamp) {
+    	status.handle(Priority.INFO, "getOverallStateChanged called, timestamp: " + timestamp);
+    	synchronized(cachedStateMonitor) {
+	    	while (true) {
+	    		if (cachedStateTime > timestamp)
+	    			return cachedState;
+	    		try {
+					cachedStateMonitor.wait();
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+	    	}
+    	}
     }
     
     protected String sendCommand(String command, int timeout) {
@@ -115,15 +192,6 @@ public class InstrumentAgent {
     
     protected String sendCommand(String command, String args, int timeout) {
     	return sendCommand(command, args, "{}", timeout);
-    }
-    
-    public String agentState() throws IOException {
-    	Map<String, Object> map = new HashMap<>();
-    	map.put("metadata", metadata);
-    	map.put("capabilities", capabilities);
-    	map.put("state", state);
-    	map.put("resources", getResources());
-    	return JsonHelper.toJson(map);
     }
     
     public String ping(int timeout) {
@@ -154,97 +222,29 @@ public class InstrumentAgent {
     	return sendCommand(Constants.DISCOVER_STATE, timeout);
     }
     
-    @SuppressWarnings("unchecked")
 	public String getMetadata(int timeout) {
-    	String reply = sendCommand(Constants.GET_CONFIG_METADATA, timeout);
-    	// update the stored agent state based on this reply
-		try {
-			Map<String, Object> response = JsonHelper.toMap(reply);
-			Object driverReply = response.get("reply");
-	    	if (driverReply instanceof Map)
-		    	metadata.putAll((Map<String, Object>) driverReply);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-    	return reply;
+    	return sendCommand(Constants.GET_CONFIG_METADATA, timeout);
     }
     
-    @SuppressWarnings("unchecked")
 	public String getCapabilities(int timeout) {
-    	String reply = sendCommand(Constants.GET_CAPABILITIES, timeout);
-    	// update the stored agent state based on this reply
-    	try {
-	    	Map<String, Object> response = JsonHelper.toMap(reply);
-	    	Object driverReply = response.get("reply");
-	    	if (driverReply instanceof List)
-	    		capabilities = (List<Object>) driverReply;
-    	} catch (IOException e) {
-    		e.printStackTrace();
-    	}
-    	return reply;
+    	return sendCommand(Constants.GET_CAPABILITIES, timeout);
     }
     
     public String getState(int timeout) {
-    	String reply = sendCommand(Constants.GET_RESOURCE_STATE, timeout);
-    	// update the stored agent state based on this reply
-    	try {
-	    	Map<String, Object> response = JsonHelper.toMap(reply);
-	    	Object driverReply = response.get("reply");
-	    	if (driverReply instanceof String)
-	    		state = (String) driverReply;
-    	} catch (IOException e) {
-    		e.printStackTrace();
-    	}
-    	return reply;
+    	return sendCommand(Constants.GET_RESOURCE_STATE, timeout);
     }
     
-    @SuppressWarnings("unchecked")
 	public String getResource(String args, int timeout) {
-    	String reply = sendCommand(Constants.GET_RESOURCE, args, timeout);
-    	// update the stored agent state based on this reply
-    	try {
-	    	Map<String, Object> response = JsonHelper.toMap(reply);
-	    	Object driverReply = response.get("reply");
-	    	if (driverReply instanceof Map)
-	    		resources.putAll((Map<String, Object>) driverReply);
-    	} catch (IOException e) {
-    		e.printStackTrace();
-    	}
-    	return reply;
+    	return sendCommand(Constants.GET_RESOURCE, args, timeout);
     }
     
-    @SuppressWarnings("unchecked")
 	public String setResource(String args, int timeout) {
-    	String reply = sendCommand(Constants.SET_RESOURCE, args, timeout);
-    	// update the stored agent state based on this reply
-    	try {
-	    	Map<String, Object> response = JsonHelper.toMap(reply);
-	    	Object driverReply = response.get("reply");
-	    	if (driverReply instanceof Map)
-	    		resources.putAll((Map<String, Object>) driverReply);
-    	} catch (IOException e) {
-    		e.printStackTrace();
-    	}
-    	return reply;
+    	return sendCommand(Constants.SET_RESOURCE, args, timeout);
     }
     
     public String execute(String args, String kwargs, int timeout) {
-    	String reply = sendCommand(Constants.EXECUTE_RESOURCE, args, kwargs, timeout);
-    	getCapabilities(2000);
-    	return reply;
+    	return sendCommand(Constants.EXECUTE_RESOURCE, args, kwargs, timeout);
     }
-
-	public Map<String, Object> getResources() {
-		return resources;
-	}
-
-	public void setResources(Map<String, Object> resources) {
-		this.resources = resources;
-	}
-
-	public void setState(String state) {
-		this.state = state;
-	}
 
 	public String getSensor() {
 		return sensor;

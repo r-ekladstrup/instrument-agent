@@ -15,9 +15,7 @@ import com.raytheon.uf.common.status.UFStatus.Priority;
 public abstract class AbstractDriverInterface extends Observable {
 	protected IUFStatusHandler status = UFStatus.getHandler(Ingest.class);
 	protected int DEFAULT_TIMEOUT = 60;
-	
-    protected abstract String _sendCommand(String command, int timeout);
-    
+	    
     protected abstract String _sendCommand(String command);
 
     protected abstract void eventLoop();
@@ -31,21 +29,13 @@ public abstract class AbstractDriverInterface extends Observable {
         status.handle(Priority.ERROR, "handleException: " + exception);
     }
     
-    protected String sendCommand(String command, String args, String kwargs, int timeout) {
+    protected String sendCommand(String command, String args, String kwargs) {
     	String json = "{\"cmd\": \"" + command + "\", \"args\": " + args + ", \"kwargs\": " + kwargs + "}";
     	status.handle(Priority.DEBUG, "Preparing to send: " + json);
     	try {
     		// parse json to verify validity prior to sending...
     		JsonHelper.toMap(json);
-    		String reply = _sendCommand(json, timeout);
-    		Map<String, Object> map = new HashMap<>();
-        	map.put("command", command);
-        	try {
-        		map.put("reply", JsonHelper.toObject(reply));
-        	} catch (Exception ignore) {
-        		map.put("reply", reply);
-        	}
-        	return JsonHelper.toJson(map);
+    		return _sendCommand(json);
     	} catch (Exception e) {
     		return failedCommand(json, e);
     	}
@@ -53,7 +43,7 @@ public abstract class AbstractDriverInterface extends Observable {
     
     private String failedCommand(String command, Exception e) {
     	Map<String, Object> map = new HashMap<>();
-    	map.put("command", command);
+    	map.put("cmd", command);
     	map.put("reply", "FAIL: " + e);
     	try {
 			return JsonHelper.toJson(map);

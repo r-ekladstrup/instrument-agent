@@ -17,6 +17,7 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
 
 import org.apache.camel.EndpointInject;
 import org.apache.camel.ProducerTemplate;
@@ -77,19 +78,35 @@ public class InstrumentAgentWebImpl implements IAgentWebInterface {
 		return Response.ok(json).build();
 	}
 
+	/*
+	 * (non-Javadoc)
+	 * @see com.raytheon.uf.ooi.plugin.instrumentagent.IAgentWebInterface#getAgent(javax.ws.rs.container.AsyncResponse, java.lang.String, double)
+	 * 
+	 * If timestamp <= 0, fetch and return the current state
+	 * otherwise, do not return until the overall state has changed.
+	 * 
+	 * Supports AJAX state updates
+	 */
 	@Override
-	public Response getAgent(String id) {
+	public void getAgent(final AsyncResponse asyncResponse, String id, final double timestamp) {
 		log.handle(Priority.INFO, "getAgent: " + id);
 		final InstrumentAgent thisAgent = agentMap.get(id);
 		if (thisAgent != null) {
-			try {
-				return Response.ok(thisAgent.agentState(), MediaType.APPLICATION_JSON).build();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+		
+			executor.execute(new Runnable() {
+				@Override
+				public void run() {
+					if (timestamp <= 0)
+						asyncResponse.resume(Response.ok(thisAgent.getOverallState(),
+								MediaType.APPLICATION_JSON).build());
+					else
+						asyncResponse.resume(Response.ok(thisAgent.getOverallStateChanged(timestamp),
+								MediaType.APPLICATION_JSON).build());
+				}
+			});
+		} else {
+			asyncResponse.resume(agentNotFound());
 		}
-		return Response.ok(agentNotFound(), MediaType.APPLICATION_JSON).build();
 	}
 
 	@Override
@@ -109,16 +126,30 @@ public class InstrumentAgentWebImpl implements IAgentWebInterface {
 		log.handle(Priority.INFO, "createAgent: sensor: " + id);
 		if (agentMap.containsKey(id))
 			return Response.ok("nope", MediaType.APPLICATION_JSON).build();
-		InstrumentAgent agent = new InstrumentAgent(id, module, klass, host, commandPort, eventPort, producer);
-		agentMap.put(id, agent);
+		
 		try {
-			agent.runDriver();
-			agent.connectDriver();
-			return Response.ok(agent.agentState(), MediaType.APPLICATION_JSON).build();
+			InstrumentAgent agent = new InstrumentAgent(id, module, klass, host, commandPort, eventPort, producer);
+			agentMap.put(id, agent);
+			return Response.ok(agent.getOverallState(), MediaType.APPLICATION_JSON).build();
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			return Response.ok("failure", MediaType.APPLICATION_JSON).build();
+			log.handle(Priority.ERROR, "Exception creating agent: " + e);
+			return Response.status(Status.INTERNAL_SERVER_ERROR).build();
+		}
+	}
+	
+	@Override
+	public Response createAgentJson(String id, String agentDef) {
+		log.handle(Priority.INFO, "createAgent: " + agentDef);
+		if (agentMap.containsKey(id))
+			return Response.notModified().build();
+		
+		try {
+			InstrumentAgent agent = new InstrumentAgent(id, agentDef, producer);
+			agentMap.put(id, agent);
+			return Response.ok(agent.getOverallState(), MediaType.APPLICATION_JSON_TYPE).build();
+		} catch (Exception e) {
+			log.handle(Priority.ERROR, "Exception creating agent: " + e);
+			return Response.status(Status.INTERNAL_SERVER_ERROR).build();
 		}
 	}
 
@@ -360,7 +391,13 @@ public class InstrumentAgentWebImpl implements IAgentWebInterface {
 	public Response getStatic(String path) {
 		try {
 			String resource = new String(Files.readAllBytes(Paths.get(contentPathString, path)));
+			if (path.endsWith(".js"))
+				return Response.ok(resource, MediaType.APPLICATION_JSON_TYPE).build();
+			if (path.endsWith(".html"))
+				return Response.ok(resource, MediaType.TEXT_HTML_TYPE).build();
 			return Response.ok(resource).build();
+
+
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
