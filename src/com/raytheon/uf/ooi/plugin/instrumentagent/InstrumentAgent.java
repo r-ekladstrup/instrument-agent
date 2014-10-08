@@ -2,10 +2,7 @@ package com.raytheon.uf.ooi.plugin.instrumentagent;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -36,7 +33,6 @@ public class InstrumentAgent {
 	protected Map<Integer, String> transactionMap = new ConcurrentHashMap<>();
 	private final Object cachedStateMonitor = new Object();
 	private String cachedState;
-	private double cachedStateTime;
 	
 	public InstrumentAgent(String sensor, String driverModule,
 			String driverKlass, String driverHost, int commandPort,
@@ -87,6 +83,15 @@ public class InstrumentAgent {
 			process.destroy();
 		if (driverInterface != null)
 			driverInterface.shutdown();
+		
+		try {
+			// TODO - build a real response...
+			cachedState = "shutdown";
+			cachedStateMonitor.notifyAll();
+		} catch (Exception ignore) {
+			// ignore
+		}
+			
 	}
 	
     public void runDriver() throws Exception {
@@ -126,7 +131,6 @@ public class InstrumentAgent {
 						if (command.equals("overall_state"))
 							synchronized(cachedStateMonitor) {
 								cachedState = reply;
-								cachedStateTime = (double) driverReply.get("time");
 								cachedStateMonitor.notifyAll();
 							}
 					}
@@ -170,19 +174,16 @@ public class InstrumentAgent {
     	return sendCommand("overall_state", "[]", "{}", 0);
     }
     
-    protected String getOverallStateChanged(double timestamp) {
-    	status.handle(Priority.INFO, "getOverallStateChanged called, timestamp: " + timestamp);
+    protected String getOverallStateChanged() {
     	synchronized(cachedStateMonitor) {
-	    	while (true) {
-	    		if (cachedStateTime > timestamp)
-	    			return cachedState;
-	    		try {
-					cachedStateMonitor.wait();
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-	    	}
+    		try {
+				cachedStateMonitor.wait();
+				return cachedState;
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				return null;
+			}
     	}
     }
     
