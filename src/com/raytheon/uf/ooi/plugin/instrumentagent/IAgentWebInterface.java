@@ -66,8 +66,7 @@ public interface IAgentWebInterface {
     public void getAgent(
     		@Suspended final AsyncResponse asyncResponse,
     		@PathParam("id") String id,
-    		@DefaultValue("0.0") @QueryParam("timestamp") final double timestamp);
-    
+    		@DefaultValue("false") @QueryParam("blocking") boolean blocking);
     
     @DELETE
     @Path("api/{id}")

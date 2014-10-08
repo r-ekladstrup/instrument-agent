@@ -11,9 +11,7 @@ import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
-import javax.ws.rs.GET;
 import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
 import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -21,8 +19,6 @@ import javax.ws.rs.core.Response.Status;
 
 import org.apache.camel.EndpointInject;
 import org.apache.camel.ProducerTemplate;
-import org.apache.cxf.service.model.EndpointInfo;
-
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.raytheon.uf.common.localization.IPathManager;
 import com.raytheon.uf.common.localization.LocalizationContext;
@@ -82,28 +78,29 @@ public class InstrumentAgentWebImpl implements IAgentWebInterface {
 	 * (non-Javadoc)
 	 * @see com.raytheon.uf.ooi.plugin.instrumentagent.IAgentWebInterface#getAgent(javax.ws.rs.container.AsyncResponse, java.lang.String, double)
 	 * 
-	 * If timestamp <= 0, fetch and return the current state
+	 * If blocking == false, fetch and return the current state
 	 * otherwise, do not return until the overall state has changed.
 	 * 
 	 * Supports AJAX state updates
 	 */
 	@Override
-	public void getAgent(final AsyncResponse asyncResponse, String id, final double timestamp) {
+	public void getAgent(final AsyncResponse asyncResponse, String id, boolean blocking) {
 		log.handle(Priority.INFO, "getAgent: " + id);
 		final InstrumentAgent thisAgent = agentMap.get(id);
 		if (thisAgent != null) {
-		
-			executor.execute(new Runnable() {
-				@Override
-				public void run() {
-					if (timestamp <= 0)
-						asyncResponse.resume(Response.ok(thisAgent.getOverallState(),
-								MediaType.APPLICATION_JSON).build());
-					else
-						asyncResponse.resume(Response.ok(thisAgent.getOverallStateChanged(timestamp),
-								MediaType.APPLICATION_JSON).build());
-				}
-			});
+			if (!blocking) {
+				asyncResponse.resume(Response.ok(thisAgent.getOverallState(),
+						MediaType.APPLICATION_JSON).build());
+			} else {
+				
+				executor.execute(new Runnable() {
+					@Override
+					public void run() {
+						asyncResponse.resume(Response.ok(thisAgent.getOverallStateChanged(),
+									MediaType.APPLICATION_JSON).build());
+					}
+				});
+			}
 		} else {
 			asyncResponse.resume(agentNotFound());
 		}
@@ -405,8 +402,8 @@ public class InstrumentAgentWebImpl implements IAgentWebInterface {
 		}
 	}
 
-	private String agentNotFound() {
+	private Response agentNotFound() {
 		// TODO
-		return "\"agent not found\"";
+		return Response.status(404).build();
 	}
 }
