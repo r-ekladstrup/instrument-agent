@@ -19,6 +19,7 @@ import javax.ws.rs.core.Response.Status;
 
 import org.apache.camel.EndpointInject;
 import org.apache.camel.ProducerTemplate;
+
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.raytheon.uf.common.localization.IPathManager;
 import com.raytheon.uf.common.localization.LocalizationContext;
@@ -36,8 +37,10 @@ public class InstrumentAgentWebImpl implements IAgentWebInterface {
 	private final Map<String, InstrumentAgent> agentMap = new HashMap<>();
 	private final Executor executor;
 	private String contentPathString;
+	private SampleAccumulator accumulator;
 	
-	public InstrumentAgentWebImpl(String basePath) {
+	public InstrumentAgentWebImpl(String basePath, final SampleAccumulator accumulator) {
+		this.accumulator = accumulator;
 		
 		IPathManager pathManager = PathManagerFactory.getPathManager();
 		LocalizationContext context = pathManager.getContext(LocalizationType.EDEX_STATIC,
@@ -55,10 +58,9 @@ public class InstrumentAgentWebImpl implements IAgentWebInterface {
 				    .setNameFormat("agentWebAsync-%d")
 				    .setDaemon(true)
 				    .build());
+		
+		executor.execute(accumulator);
 	}
-	
-	@EndpointInject(uri="jms-durable:queue:Ingest.instrument", context="agent-ingest-camel")
-	protected ProducerTemplate producer;
 
 	@Override
 	public Response listAgents() {
@@ -125,7 +127,7 @@ public class InstrumentAgentWebImpl implements IAgentWebInterface {
 			return Response.ok("nope", MediaType.APPLICATION_JSON).build();
 		
 		try {
-			InstrumentAgent agent = new InstrumentAgent(id, module, klass, host, commandPort, eventPort, producer);
+			InstrumentAgent agent = new InstrumentAgent(id, module, klass, host, commandPort, eventPort, accumulator);
 			agentMap.put(id, agent);
 			return Response.ok(agent.getOverallState(), MediaType.APPLICATION_JSON).build();
 		} catch (Exception e) {
@@ -141,7 +143,7 @@ public class InstrumentAgentWebImpl implements IAgentWebInterface {
 			return Response.notModified().build();
 		
 		try {
-			InstrumentAgent agent = new InstrumentAgent(id, agentDef, producer);
+			InstrumentAgent agent = new InstrumentAgent(id, agentDef, accumulator);
 			agentMap.put(id, agent);
 			return Response.ok(agent.getOverallState(), MediaType.APPLICATION_JSON_TYPE).build();
 		} catch (Exception e) {

@@ -1,11 +1,8 @@
 package com.raytheon.uf.ooi.plugin.instrumentagent;
 
-import java.io.IOException;
 import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
-
-import org.apache.camel.ProducerTemplate;
 
 import com.raytheon.uf.common.status.IUFStatusHandler;
 import com.raytheon.uf.common.status.UFStatus;
@@ -13,15 +10,15 @@ import com.raytheon.uf.common.status.UFStatus.Priority;
 
 public class DriverEventHandler implements Observer {
 	
-	protected ProducerTemplate producer;
+	protected SampleAccumulator accumulator;
 	protected InstrumentAgent agent;
 	protected String sensor;
 
 	protected IUFStatusHandler status = UFStatus.getHandler(Ingest.class);
 
-    public DriverEventHandler(InstrumentAgent agent, ProducerTemplate producer, String sensor) {
+    public DriverEventHandler(InstrumentAgent agent, SampleAccumulator accumulator, String sensor) {
     	this.agent = agent;
-    	this.producer = producer;
+    	this.accumulator = accumulator;
     	this.sensor = sensor;
     }
     
@@ -41,8 +38,7 @@ public class DriverEventHandler implements Observer {
                 	if (particle.get("stream_name").equals("raw")) {
                 		// TODO handle raw
                 	} else {
-                		// inject event time into particle
-                		producer.sendBodyAndHeader(particle, "sensor", sensor);
+                		accumulator.process(particle, sensor);
                 	}
                     break;
                 case Constants.DRIVER_ASYNC_EVENT:
@@ -51,7 +47,7 @@ public class DriverEventHandler implements Observer {
                 	this.agent.transactionMap.put(transactionId, (String) arg);
                 	break;
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }

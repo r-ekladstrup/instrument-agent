@@ -12,9 +12,10 @@
         http://cxf.apache.org/jaxrs 
         http://cxf.apache.org/schemas/jaxrs.xsd">
         
-    
+    <bean id="sampleAccumulator" class="com.raytheon.uf.ooi.plugin.instrumentagent.SampleAccumulator" />
     <bean id="agentWeb" class="com.raytheon.uf.ooi.plugin.instrumentagent.InstrumentAgentWebImpl">
     	<constructor-arg name="basePath" value="ooi/instruments/agent-web/app" />
+    	<constructor-arg name="accumulator" ref="sampleAccumulator" />
     </bean>
     	    
     <jaxrs:server id="agentWebClientSubscriptionEndpoint" address="http://0.0.0.0:12572">
@@ -25,26 +26,5 @@
             <ref bean="localizationCxfJaxrsCorsFilter" />
 		</jaxrs:providers>
     </jaxrs:server>
-    
-    <bean id="ingest"
-		class="com.raytheon.uf.ooi.plugin.instrumentagent.Ingest" />
-
-	<camelContext id="agent-ingest-camel" xmlns="http://camel.apache.org/schema/spring"
-		errorHandlerRef="errorHandler">
-
-		<route id="agent-ingest-camel">
-			<from uri="jms-durable:queue:Ingest.instrument" />  
-			<doTry>
-				<pipeline>
-                    <bean ref="ingest" />
-                    <to uri="direct-vm:persistIndexAlert" />
-                </pipeline>
-				<doCatch>
-					<exception>java.lang.Throwable</exception>
-					<to uri="log:ooiAgentIngest?level=ERROR"/>
-				</doCatch>
-			</doTry>
-		</route>
-	</camelContext>
     
 </beans>
