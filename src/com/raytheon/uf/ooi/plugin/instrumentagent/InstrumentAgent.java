@@ -36,18 +36,18 @@ public class InstrumentAgent {
 	
 	public InstrumentAgent(String sensor, String driverModule,
 			String driverKlass, String driverHost, int commandPort,
-			int eventPort, ProducerTemplate producer) throws Exception {
+			int eventPort, SampleAccumulator accumulator) throws Exception {
 		this.sensor = sensor;
 		this.driverModule = driverModule;
 		this.driverKlass = driverKlass;
 		this.driverHost = driverHost;
 		this.commandPort = commandPort;
 		this.eventPort = eventPort;
-		eventListener = new DriverEventHandler(this, producer, sensor);
+		eventListener = new DriverEventHandler(this, accumulator, sensor);
 		startup();
 	}
 	
-	public InstrumentAgent(String id, String jsonDefinition, ProducerTemplate producer) throws Exception {
+	public InstrumentAgent(String id, String jsonDefinition, SampleAccumulator accumulator) throws Exception {
 		Map<String, Object> map = JsonHelper.toMap(jsonDefinition);
 		sensor = id;
 		driverModule = (String) map.get("module");
@@ -55,7 +55,7 @@ public class InstrumentAgent {
 		driverHost = (String) map.get("host");
 		commandPort = (int) map.get("commandPort");
 		eventPort = (int) map.get("eventPort");
-		eventListener = new DriverEventHandler(this, producer, sensor);
+		eventListener = new DriverEventHandler(this, accumulator, sensor);
 		startup();
 	}
 	
