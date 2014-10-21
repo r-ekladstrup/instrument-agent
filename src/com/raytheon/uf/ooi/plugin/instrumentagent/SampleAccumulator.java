@@ -16,16 +16,14 @@ import com.raytheon.uf.edex.ooi.decoder.dataset.AbstractParticleDecoder;
 public class SampleAccumulator extends AbstractParticleDecoder implements Runnable {
 	private IUFStatusHandler statusHandler = UFStatus.getHandler(this.getClass());
 	private List<SensorReadingRecord> sampleList = new LinkedList<SensorReadingRecord>();
-	private long PUBLISH_INTERVAL = 1000;
+	private long PUBLISH_INTERVAL = 5000;
 	
 	@EndpointInject(uri="direct-vm:persistIndexAlert")
 	protected ProducerTemplate producer;
 	
-	public void process(Map<String, Object> particle, String sensor) throws Exception {
+	public synchronized void process(Map<String, Object> particle, String sensor) throws Exception {
 		SensorReadingRecord record = parseMap("streaming", sensor, particle);
-		synchronized(sampleList) {
-	        sampleList.add(record);
-		}
+	    sampleList.add(record);
     }
 	
 	public void publish() {
