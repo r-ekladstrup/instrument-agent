@@ -10,28 +10,30 @@ import java.util.Map;
 
 public class JsonHelper {
     private static final ObjectMapper mapper = new ObjectMapper();
-    protected static final TypeReference<Map<String, Object>> mapType =
-    		new TypeReference<Map<String, Object>>() {};
-	protected static final TypeReference<List<Object>> listType =
-    		new TypeReference<List<Object>>() {};
-    		
+    protected static final TypeReference<Map<String, Object>> mapType = new TypeReference<Map<String, Object>>() {
+    };
+    protected static final TypeReference<List<Object>> listType = new TypeReference<List<Object>>() {
+    };
+
     static {
-    	// TODO - this is needed to handle NaN, but not present in jackson 1.7.3
-        //mapper.configure(JsonParser.Feature.ALLOW_NON_NUMERIC_NUMBERS, true);
-        //mapper.configure(JsonGenerator.Feature.QUOTE_NON_NUMERIC_NUMBERS, false);
+        // TODO - this is needed to handle NaN, but not present in jackson 1.7.3
+        // mapper.configure(JsonParser.Feature.ALLOW_NON_NUMERIC_NUMBERS, true);
+        // mapper.configure(JsonGenerator.Feature.QUOTE_NON_NUMERIC_NUMBERS,
+        // false);
     }
-    
-    private JsonHelper() {}
+
+    private JsonHelper() {
+    }
 
     public static String toJson(Object obj) throws IOException {
         return mapper.writeValueAsString(obj);
     }
 
-	public static Map<String, Object> toMap(String json) throws IOException {
+    public static Map<String, Object> toMap(String json) throws IOException {
         return mapper.readValue(json, mapType);
     }
 
-	public static List<Object> toList(String json) throws IOException {
+    public static List<Object> toList(String json) throws IOException {
         JsonNode node = mapper.readTree(json);
         if (node.isArray())
             return mapper.readValue(json, listType);

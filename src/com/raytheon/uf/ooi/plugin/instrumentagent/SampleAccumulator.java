@@ -14,39 +14,39 @@ import com.raytheon.uf.common.status.UFStatus.Priority;
 import com.raytheon.uf.edex.ooi.decoder.dataset.AbstractParticleDecoder;
 
 public class SampleAccumulator extends AbstractParticleDecoder implements Runnable {
-	private IUFStatusHandler statusHandler = UFStatus.getHandler(this.getClass());
-	private List<SensorReadingRecord> sampleList = new LinkedList<SensorReadingRecord>();
-	private long PUBLISH_INTERVAL = 5000;
-	
-	@EndpointInject(uri="direct-vm:persistIndexAlert")
-	protected ProducerTemplate producer;
-	
-	public synchronized void process(Map<String, Object> particle, String sensor) throws Exception {
-		SensorReadingRecord record = parseMap("streaming", sensor, particle);
-	    sampleList.add(record);
+    private IUFStatusHandler statusHandler = UFStatus.getHandler(this.getClass());
+    private List<SensorReadingRecord> sampleList = new LinkedList<SensorReadingRecord>();
+    private long PUBLISH_INTERVAL = 5000;
+
+    @EndpointInject(uri = "direct-vm:persistIndexAlert")
+    protected ProducerTemplate producer;
+
+    public synchronized void process(Map<String, Object> particle, String sensor) throws Exception {
+        SensorReadingRecord record = parseMap("streaming", sensor, particle);
+        sampleList.add(record);
     }
-	
-	public void publish() {
-		Object records[];
-		synchronized(sampleList) {
-			records = sampleList.toArray();
-			sampleList.clear();
-		}
-		
-		if (records.length > 0) {
-			statusHandler.handle(Priority.INFO, "Going to publish " + records.length + " particles");
-			producer.sendBody(records);
-		}	
-	}
-	
-	public void run() {
-		while (true) {
-			try {
-				publish();
-				Thread.sleep(PUBLISH_INTERVAL);
-			} catch (Exception e) {
-				statusHandler.handle(Priority.CRITICAL, "Ignoring exception in InstrumentAgent publish loop: " + e);
-			}
-		}
-	}
+
+    public void publish() {
+        Object records[];
+        synchronized (sampleList) {
+            records = sampleList.toArray();
+            sampleList.clear();
+        }
+
+        if (records.length > 0) {
+            statusHandler.handle(Priority.INFO, "Going to publish " + records.length + " particles");
+            producer.sendBody(records);
+        }
+    }
+
+    public void run() {
+        while (true) {
+            try {
+                publish();
+                Thread.sleep(PUBLISH_INTERVAL);
+            } catch (Exception e) {
+                statusHandler.handle(Priority.CRITICAL, "Ignoring exception in InstrumentAgent publish loop: " + e);
+            }
+        }
+    }
 }

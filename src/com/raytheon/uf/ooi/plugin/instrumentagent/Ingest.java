@@ -17,10 +17,10 @@ public class Ingest extends AbstractParticleDecoder implements Processor {
         String sensor = (String) exchange.getIn().getHeader(AbstractParticleDecoder.EXCHANGE_SENSOR_HEADER);
 
         @SuppressWarnings("unchecked")
-		Map<String, Object> particle = exchange.getIn().getBody(Map.class);
+        Map<String, Object> particle = exchange.getIn().getBody(Map.class);
 
         SensorReadingRecord readings[] = { parseMap("streaming", sensor, particle) };
-        
+
         exchange.getOut().setBody(readings);
     }
 }
