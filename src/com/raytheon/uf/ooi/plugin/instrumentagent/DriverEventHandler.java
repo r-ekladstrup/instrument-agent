@@ -33,8 +33,8 @@ public class DriverEventHandler implements Observer {
                     agent.getOverallState();
                     break;
                 case Constants.SAMPLE_EVENT:
-                	Map<String, Object> particle =
-                		JsonHelper.toMap((String) event.get("value"));
+                	@SuppressWarnings("unchecked")
+					Map<String, Object> particle =(Map<String, Object>) event.get("value");
                 	if (particle.get("stream_name").equals("raw")) {
                 		// TODO handle raw
                 	} else {
