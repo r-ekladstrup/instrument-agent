@@ -18,7 +18,7 @@
     	<constructor-arg name="accumulator" ref="sampleAccumulator" />
     </bean>
     	    
-    <jaxrs:server id="agentWebClientSubscriptionEndpoint" address="${ooi.web.agent.address}">
+    <jaxrs:server id="agentWebClientSubscriptionEndpoint" address="$ws{ooi.web.agent.address}">
         <jaxrs:serviceBeans>
             <ref bean="agentWeb" />
         </jaxrs:serviceBeans>
