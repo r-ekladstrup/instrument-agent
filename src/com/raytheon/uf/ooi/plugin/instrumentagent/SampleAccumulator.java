@@ -12,6 +12,7 @@ import com.raytheon.uf.common.status.IUFStatusHandler;
 import com.raytheon.uf.common.status.UFStatus;
 import com.raytheon.uf.common.status.UFStatus.Priority;
 import com.raytheon.uf.edex.ooi.decoder.dataset.AbstractParticleDecoder;
+import com.raytheon.uf.edex.ooi.decoder.dataset.HashingException;
 
 public class SampleAccumulator extends AbstractParticleDecoder implements Runnable {
     private IUFStatusHandler statusHandler = UFStatus.getHandler(this.getClass());
@@ -48,5 +49,17 @@ public class SampleAccumulator extends AbstractParticleDecoder implements Runnab
                 statusHandler.handle(Priority.CRITICAL, "Ignoring exception in InstrumentAgent publish loop: " + e);
             }
         }
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.raytheon.uf.edex.ooi.decoder.dataset.AbstractParticleDecoder#
+     * getHashColumn(java.util.Map)
+     */
+    @Override
+    protected String getHashColumn(Map<String, Object> flattenedValues)
+            throws HashingException {
+        return null;
     }
 }

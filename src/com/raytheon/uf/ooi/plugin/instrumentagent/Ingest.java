@@ -4,8 +4,10 @@ import java.util.Map;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
+
 import com.raytheon.uf.common.dataplugin.sensorreading.SensorReadingRecord;
 import com.raytheon.uf.edex.ooi.decoder.dataset.AbstractParticleDecoder;
+import com.raytheon.uf.edex.ooi.decoder.dataset.HashingException;
 
 /**
  * @author pcable
@@ -22,5 +24,17 @@ public class Ingest extends AbstractParticleDecoder implements Processor {
         SensorReadingRecord readings[] = { parseMap("streaming", sensor, particle) };
 
         exchange.getOut().setBody(readings);
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.raytheon.uf.edex.ooi.decoder.dataset.AbstractParticleDecoder#
+     * getHashColumn(java.util.Map)
+     */
+    @Override
+    protected String getHashColumn(Map<String, Object> flattenedValues)
+            throws HashingException {
+        return null;
     }
 }
